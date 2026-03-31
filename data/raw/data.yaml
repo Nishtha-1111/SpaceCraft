@@ -1,0 +1,12 @@
+train: train/images
+val: valid/images
+test: test/images
+nc: 25
+names: ['Bed', 'Cabinet', 'Carpet', 'Ceramic floor', 'Chair', 'Closet', 'Cupboard', 'Curtains', 'Dining Table', 'Door', 'Frame', 'Futec frame', 'Futech tiles', 'Gypsum Board', 'Lamp', 'Nightstand', 'Shelf', 'Sideboard', 'Sofa', 'TV stand', 'Table', 'Transparent Closet', 'Wall Panel', 'Window', 'Wooden floor']
+
+roboflow:
+  workspace: project
+  project: furniture-detection-qiufc
+  version: 20
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/project/furniture-detection-qiufc/dataset/20
