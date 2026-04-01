@@ -3,25 +3,12 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODEL_PATH = os.path.abspath(
-    os.path.join(
-        BASE_DIR,
-        "..",
-        "runs",
-        "detect",
-        "runs",
-        "train_resume",
-        "room_detector_v2",
-        "weights",
-        "best.pt",
-    )
-)
+# Model lives at backend/model/best.pt (committed to repo)
+MODEL_PATH = os.path.join(BASE_DIR, "model", "best.pt")
 
-OUTPUT_PROJECT = os.path.abspath(
-    os.path.join(BASE_DIR, "..", "runs", "custom_detect")
-)
+OUTPUT_PROJECT = os.path.join(BASE_DIR, "runs", "custom_detect")
 
-model = YOLO("runs/detect/room_detector_v2/weights/best.pt")
+model = YOLO(MODEL_PATH)
 
 
 def calculate_iou(box1, box2):

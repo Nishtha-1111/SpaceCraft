@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,8 +19,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -34,7 +34,7 @@ def home():
 
 
 @app.post("/analyze-room")
-async def analyze_room_api(file: UploadFile = File(...)):
+async def analyze_room_api(request: Request, file: UploadFile = File(...)):
     safe_name = file.filename.replace(" ", "_")
     file_path = os.path.join(UPLOAD_DIR, safe_name)
 
@@ -44,7 +44,8 @@ async def analyze_room_api(file: UploadFile = File(...)):
     detections = detect_room_objects(file_path)
     analysis = analyze_room(detections)
 
-    output_image_url = f"http://127.0.0.1:8000/outputs/room_test/{safe_name}"
+    base_url = str(request.base_url).rstrip("/")
+    output_image_url = f"{base_url}/outputs/room_test/{safe_name}"
 
     return JSONResponse(
         {

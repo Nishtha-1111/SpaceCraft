@@ -17,6 +17,7 @@ Thumbs.db
 # Training runs (VERY IMPORTANT)
 runs/
 *.pt
+!backend/model/best.pt
 
 # Logs
 *.log

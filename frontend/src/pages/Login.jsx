@@ -20,7 +20,19 @@ function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/");
     } catch (err) {
-      setError("Invalid email or password.");
+      const code = err.code;
+      if (code === "auth/user-not-found") {
+        setError("No account found with this email. Please sign up first.");
+      } else if (code === "auth/wrong-password" || code === "auth/invalid-credential") {
+        setError("Incorrect password. Please try again.");
+      } else if (code === "auth/invalid-email") {
+        setError("Invalid email address format.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please try again later.");
+      } else {
+        setError(`Login failed: ${err.message}`);
+      }
+      console.error("Firebase auth error:", code, err.message);
     } finally {
       setLoading(false);
     }
