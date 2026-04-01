@@ -21,7 +21,7 @@ OUTPUT_PROJECT = os.path.abspath(
     os.path.join(BASE_DIR, "..", "runs", "custom_detect")
 )
 
-model = YOLO(MODEL_PATH)
+model = YOLO("runs/detect/room_detector_v2/weights/best.pt")
 
 
 def calculate_iou(box1, box2):
