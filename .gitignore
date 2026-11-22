@@ -24,3 +24,6 @@ runs/
 
 # Firebase config (optional)
 firebase.json
+
+# Uploads
+backend/uploads/
