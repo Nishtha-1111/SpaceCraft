@@ -1,55 +1,45 @@
-# 🚀 SpaceCraft — Room Optimizer AI
+# SpaceCraft — Room Optimizer AI
 
-> **Transform room photos into actionable interior layout insights using Computer Vision and Spatial Heuristics.**
-
-![Room Optimizer AI Dashboard](assets/dashboard-preview.jpg)
+SpaceCraft is an interior layout analysis tool that evaluates room photos using computer vision and rule-based spatial heuristics. It detects furniture and architectural elements, calculates a room score from 0 to 100, and provides practical layout recommendations to improve flow, open pathways, and balance space.
 
 ---
 
-## 🌟 Overview
+## Overview
 
-Arranging furniture is deceptively hard. Whether moving into a new apartment or redesigning a crowded bedroom, understanding spatial balance, walkway clearances, and focal points usually requires an interior designer.
+Arranging furniture in bedrooms and living spaces often comes down to trial and error. SpaceCraft helps users evaluate room layouts before physically moving heavy furniture around. 
 
-**SpaceCraft (Room Optimizer AI)** brings intelligent spatial evaluation right to your browser. Simply snap and upload a picture of any room — the AI pipeline detects furniture, windows, and doors, calculates an intuitive **Room Score (0–100)**, and delivers clear, human-friendly recommendations to optimize room flow, eliminate clutter, and maximize living space.
-
----
-
-## ✨ Key Features
-
-- 🛋️ **Intelligent Object Detection**: Identifies beds, chairs, tables, sofas, doors, windows, storage units, nightstands, and lighting fixtures using a custom fine-tuned **YOLOv8** model.
-- 📐 **Spatial Geometry & Proximity Engine**: Analyzes real physical relationships between objects (e.g., whether a nightstand is beside a bed, or if large furniture obstructs entryways).
-- 🏆 **Dynamic Room Score (0–100)**: Evaluates clutter, walkway accessibility, functional grouping, and perimeter placement into a holistic layout score.
-- 💡 **Actionable Optimization Advice**: Delivers personalized recommendations (e.g., repositioning center-heavy beds towards walls, opening door pathways).
-- 🎨 **Modern Dark Neon UI**: Clean, responsive web interface built with React, Vite, and modern glassmorphism aesthetics.
+Upload a room photo to get:
+- Object detection for furniture, windows, and doors
+- Proximity and placement evaluation (e.g. wall alignment vs. center congestion)
+- A room layout score (0–100)
+- Concrete suggestions to optimize walkways and functionality
 
 ---
 
-## 🏗️ Architecture & Pipeline
+## Key Features
 
-```mermaid
-flowchart LR
-    A[User Room Photo] --> B[FastAPI Backend]
-    B --> C[Custom YOLOv8s Model]
-    C --> D[Duplicate Filter & NMS]
-    D --> E[Spatial Analysis Engine]
-    E --> F[Room Score & Layout Advice]
-    F --> G[React Frontend Dashboard]
-```
-
-1. **Image Preprocessing & Ingestion**: The uploaded image is received by FastAPI and normalized.
-2. **YOLOv8 Detection**: Fine-tuned on interior furniture and architectural fixtures with custom confidence (`0.28`) and NMS thresholds (`0.45`).
-3. **Bounding-Box Overlap Deduplication**: Eliminates multi-label ghost boxes and duplicate detections using custom IoU comparison.
-4. **Heuristic Spatial Analysis**: Evaluates bounding box centers, relative proximity, wall clearances, and central room congestion.
-5. **Score & Suggestion Generation**: Starts at a balanced baseline (`50`) and dynamically adjusts based on ergonomic and aesthetic guidelines.
+- **Object Detection**: Identifies beds, chairs, tables, sofas, doors, windows, storage units, nightstands, and lighting using a custom-trained YOLOv8 model.
+- **Spatial Geometry Engine**: Evaluates geometric relationships between bounding boxes (e.g. nightstands beside beds, or objects blocking doors).
+- **Room Scoring (0–100)**: Evaluates clutter, doorway clearance, perimeter placement, and functional groupings.
+- **Layout Feedback**: Offers targeted suggestions, such as moving center-placed beds toward walls or clearing entryways.
+- **Web Interface**: Clean React and Vite dashboard with dark mode styling and Firebase authentication.
 
 ---
 
-## 🧠 Core Code Highlights
+## Pipeline & How It Works
 
-Here are the key algorithms powering SpaceCraft's detection and spatial intelligence:
+1. **Image Input**: The user uploads an image through the frontend dashboard or REST API.
+2. **YOLOv8 Detection**: The image is processed with custom confidence (0.28) and IoU (0.45) thresholds to recognize interior objects.
+3. **IoU Deduplication**: Overlapping bounding boxes with matching class labels are filtered out so items are not counted twice.
+4. **Spatial Analysis Engine**: Relative box centers, distances, wall proximity, and central clustering are calculated.
+5. **Score & Feedback Generation**: Starts at a base score of 50 and dynamically adjusts based on layout rules before clamping to 0–100.
 
-### 1. Custom Bounding-Box Deduplication (`backend/detect.py`)
-To prevent double-counting furniture (e.g., overlapping boxes on a large sofa or bed), SpaceCraft uses an IoU-based filtering pass:
+---
+
+## Core Code Highlights
+
+### 1. Bounding-Box Deduplication (`backend/detect.py`)
+Filters overlapping bounding boxes of the same class to avoid duplicate counts on large furniture:
 
 ```python
 def calculate_iou(box1, box2):
@@ -73,7 +63,6 @@ def calculate_iou(box1, box2):
 
 
 def remove_duplicates(detections, iou_threshold=0.5):
-    # Sort detections descending by confidence score
     detections = sorted(detections, key=lambda x: x["confidence"], reverse=True)
     filtered = []
 
@@ -93,7 +82,7 @@ def remove_duplicates(detections, iou_threshold=0.5):
 ---
 
 ### 2. Spatial Geometry Engine (`backend/suggest.py`)
-SpaceCraft determines whether furniture is clustered in the center, placed cleanly along walls, or obstructing movement paths:
+Computes object centers, proximity, wall margins, and center zone bounds:
 
 ```python
 def get_center(bbox):
@@ -125,26 +114,24 @@ def is_near_wall(obj, image_width=1000, image_height=1000, margin=120):
 
 ---
 
-### 3. Layout Scoring & Heuristic Feedback (`backend/suggest.py`)
-Scores are computed dynamically based on interior design principles:
+### 3. Layout Scoring & Suggestions (`backend/suggest.py`)
+Applies ergonomic and spatial rules to adjust the layout score:
 
 ```python
 def analyze_room(detections):
     suggestions = []
-    score = 50  # Balanced starting baseline
+    score = 50
 
     beds = [d for d in detections if d["label"] == "Bed"]
     storage_items = [d for d in detections if d["label"] in ["Shelf", "Cabinet", "Closet"]]
     doors = [d for d in detections if d["label"] == "Door"]
 
-    # Encourage perimeter placement for large storage
     for item in storage_items:
         if is_near_wall(item):
             suggestions.append("Storage positioned against walls keeps central floor space open.")
             score += 6
             break
 
-    # Flag blocked doorways
     for door in doors:
         for item in beds + storage_items:
             if is_near(door, item, threshold=140):
@@ -152,19 +139,17 @@ def analyze_room(detections):
                 score -= 8
                 break
 
-    # Penalize center-heavy layouts
     for bed in beds:
         if is_in_center(bed):
             suggestions.append("The bed appears close to the room center. Shifting it towards a wall improves flow.")
             score -= 6
 
-    # Clamp final score between 0 and 100
     return {"score": max(0, min(100, score)), "suggestions": suggestions}
 ```
 
 ---
 
-### 4. RESTful API Pipeline (`backend/app.py`)
+### 4. REST API Endpoint (`backend/app.py`)
 ```python
 @app.post("/analyze-room")
 async def analyze_room_api(request: Request, file: UploadFile = File(...)):
@@ -174,7 +159,6 @@ async def analyze_room_api(request: Request, file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Run AI inference and spatial scoring
     detections = detect_room_objects(file_path)
     analysis = analyze_room(detections)
 
@@ -189,7 +173,7 @@ async def analyze_room_api(request: Request, file: UploadFile = File(...)):
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Domain | Technologies |
 |---|---|
@@ -200,14 +184,14 @@ async def analyze_room_api(request: Request, file: UploadFile = File(...)):
 
 ---
 
-## ⚡ Quick Start Guide
+## Getting Started
 
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+ and npm
 - Git
 
-### 1. Clone Repository
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/Nishtha-1111/SpaceCraft.git
 cd SpaceCraft
@@ -215,39 +199,27 @@ cd SpaceCraft
 
 ### 2. Backend Setup
 ```powershell
-# Activate virtual environment
 venv\Scripts\activate
-
-# Navigate and install dependencies
 cd backend
 pip install -r requirements.txt
-
-# Start backend server
 uvicorn app:app --reload
 ```
-*API runs at `http://127.0.0.1:8000` (docs available at `/docs`)*
+The API will run locally at `http://127.0.0.1:8000` (interactive documentation at `/docs`).
 
 ### 3. Frontend Setup
 ```powershell
-# Open a new terminal
 cd frontend
-
-# Install packages
 npm install
-
-# Start Vite dev server
 npm run dev
 ```
-*Web dashboard opens at `http://localhost:5173`*
+The client application will run at `http://localhost:5173`.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 SpaceCraft/
-├── assets/                  # Project screenshots & visual assets
-│   └── dashboard-preview.jpg
 ├── backend/                 # FastAPI REST application
 │   ├── model/               # Trained model weights (best.pt)
 │   ├── app.py               # API endpoints & routing
@@ -260,16 +232,11 @@ SpaceCraft/
 ├── training/                # YOLOv8 custom training scripts
 │   └── train.py
 ├── data/                    # Dataset configs & raw labels
-├── PROJECT_SUMMARY.md       # Comprehensive architecture docs
-└── README.md                # Humanized project overview
+├── PROJECT_SUMMARY.md       # Full architecture documentation
+└── README.md                # Project documentation
 ```
 
 ---
 
-## 🤝 Contributing
-Contributions, bug reports, and layout suggestions are always welcome! Feel free to open an issue or submit a pull request.
-
----
-
-## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
+## License
+This project is licensed under the MIT License.
